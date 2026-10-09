@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: service-appointment
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/service_appointment}
+    username: ${DB_USERNAME:servis}
+    password: ${DB_PASSWORD:servis}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
