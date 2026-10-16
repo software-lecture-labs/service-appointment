@@ -37,6 +37,19 @@ Her teknolojiyi projenin gerçek ihtiyacına göre seçtik. Seçtiğimiz her ara
 | **Lombok** | Getter ve constructor gibi tekrar eden kodları azaltıyor. | Derleme zamanında kod ürettiği için IDE'de eklentisinin kurulu olması gerekiyor. |
 | **Thymeleaf + Bootstrap** | Frontend'i ayrı bir JavaScript projesi kurmadan Java ile yazmamızı sağlıyor. Bootstrap, CSS yazmadan düzgün görünen sayfalar sunuyor. | React gibi tek sayfalık uygulamalar kadar etkileşimli değil. Her işlemde sayfa sunucuda yeniden üretiliyor. |
 
+### Loglama politikası
+
+Loglama için Spring Boot'un varsayılanı olan **SLF4J + Logback** kullanılır. Ek bir kütüphane veya sunucu gerektirmez. Hataların log seviyesi tek bir soruya göre belirlenir: **"Birinin bir şey yapması gerekiyor mu?"**
+
+| Seviye | Anlamı | Örnek | Stack trace |
+|---|---|---|---|
+| **ERROR** | Hemen müdahale gerekiyor | Beklenmeyen hata (500) | Var |
+| **WARN** | Sistem toparladı ama sebebi incelenmeli | Veri bütünlüğü ihlali: servis kontrolünün kaçırdığı bir durum (eşzamanlı istek, eksik doğrulama) | Yok, sadece kök neden |
+| **INFO** | Önemli iş olayı, müdahale gerekmiyor | İş kuralı reddi (409): yetersiz stok, kayıt zaten var, eşzamanlı güncelleme | Yok |
+| **DEBUG** | İstemcinin hatalı isteği, normal akış | Doğrulama hatası (400), kayıt bulunamadı (404) | Yok |
+
+Stack trace yalnızca ERROR seviyesinde basılır. Beklenen hatalarda stack trace yeni bilgi vermez ama log hacmini büyütür. Bu kural `GlobalExceptionHandler` içinde uygulanır ve `GlobalExceptionHandlerTest` ile doğrulanır.
+
 ### Bilerek kullanmadıklarımız
 
 | Teknoloji | Neden kullanmadık |
