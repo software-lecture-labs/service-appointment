@@ -17,12 +17,17 @@ import lombok.NoArgsConstructor;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import com.dgs.servis.exception.StokLimitiAsildiException;
 import com.dgs.servis.exception.YetersizStokException;
 
 /**
  * Serviste kullanılan yedek parça ve stok bilgisi.
  * Stok yalnızca {@link #stokEkle(int)} ve {@link #stokDus(int)} üzerinden değiştirilir,
- * böylece stok hiçbir zaman eksiye düşemez.
+ * böylece stok hiçbir zaman eksiye düşemez, üst sınırda da taşıp eksiye dönmez.
+ *
+ * <p>Geçersiz adetler ({@link IllegalArgumentException}) istemcinin hatası değil, programlama hatası
+ * sayılır: kullanıcıdan gelen değerler önce DTO doğrulamasından (örn. {@code @Positive}) geçer, bu kontroller
+ * son savunma hattıdır. Buraya ulaşılırsa 500 ve ERROR log'u doğru sonuçtur.
  */
 @Entity
 @Table(name = "parca")
@@ -69,11 +74,20 @@ public class Parca {
 		this.birimFiyat = birimFiyat;
 	}
 
+	/**
+	 * Stoğa adet ekler. Toplam {@code int} sınırını aşacaksa sessizce eksiye dönmek yerine
+	 * {@link StokLimitiAsildiException} fırlatır ve stok değişmez.
+	 */
 	public void stokEkle(int adet) {
 		if (adet <= 0) {
 			throw new IllegalArgumentException("Eklenecek adet pozitif olmalı");
 		}
-		this.stokAdedi += adet;
+		try {
+			this.stokAdedi = Math.addExact(this.stokAdedi, adet);
+		}
+		catch (ArithmeticException tasma) {
+			throw new StokLimitiAsildiException(kod, stokAdedi, adet);
+		}
 	}
 
 	public void stokDus(int adet) {

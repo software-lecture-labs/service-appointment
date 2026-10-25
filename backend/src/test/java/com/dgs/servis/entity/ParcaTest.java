@@ -10,9 +10,11 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.dgs.servis.exception.StokLimitiAsildiException;
 import com.dgs.servis.exception.YetersizStokException;
 
 /**
@@ -98,6 +100,34 @@ class ParcaTest {
 		parca.stokEkle(eklenen);
 
 		assertThat(parca.getStokAdedi()).isEqualTo(stok + eklenen);
+	}
+
+	@ParameterizedTest(name = "stok={0}, eklenen={1}")
+	@CsvSource({
+			"2147483647, 1",
+			"2147483600, 100",
+			"2147483643, 5",
+			"1, 2147483647" })
+	void stokEkle_ustSinirAsilirsaHataFirlatirVeStokDegismez(int stok, int eklenen) {
+		Parca parca = rastgeleParca(stok);
+
+		assertThatThrownBy(() -> parca.stokEkle(eklenen))
+				.isInstanceOf(StokLimitiAsildiException.class)
+				.hasMessageContaining(parca.getKod());
+		assertThat(parca.getStokAdedi()).isEqualTo(stok);
+	}
+
+	@ParameterizedTest(name = "stok={0}, eklenen={1}")
+	@CsvSource({
+			"0, 2147483647",
+			"2147483646, 1",
+			"2147483600, 47" })
+	void stokEkle_tamUstSinirdaTasmadanKabulEder(int stok, int eklenen) {
+		Parca parca = rastgeleParca(stok);
+
+		parca.stokEkle(eklenen);
+
+		assertThat(parca.getStokAdedi()).isEqualTo(Integer.MAX_VALUE);
 	}
 
 	@ParameterizedTest(name = "adet={0}")
