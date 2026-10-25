@@ -43,9 +43,9 @@ Loglama için Spring Boot'un varsayılanı olan **SLF4J + Logback** kullanılır
 
 | Seviye | Anlamı | Örnek | Stack trace |
 |---|---|---|---|
-| **ERROR** | Hemen müdahale gerekiyor | Beklenmeyen hata (500) | Var |
+| **ERROR** | Hemen müdahale gerekiyor | Beklenmeyen hata (500). Entity'lerdeki `IllegalArgumentException` de buraya girer: kullanıcı verisi önce DTO doğrulamasından (`@Positive` gibi) geçtiği için entity'deki kontrol "son savunma hattıdır". Tetiklenirse bir doğrulama atlanmıştır, yani programlama hatasıdır. | Var |
 | **WARN** | Sistem toparladı ama sebebi incelenmeli | Veri bütünlüğü ihlali: servis kontrolünün kaçırdığı bir durum (eşzamanlı istek, eksik doğrulama) | Yok, sadece kök neden |
-| **INFO** | Önemli iş olayı, müdahale gerekmiyor | İş kuralı reddi (409): yetersiz stok, kayıt zaten var, eşzamanlı güncelleme | Yok |
+| **INFO** | Önemli iş olayı, müdahale gerekmiyor | İş kuralı reddi (409): yetersiz stok, stok üst sınırı aşıldı, kayıt zaten var, eşzamanlı güncelleme | Yok |
 | **DEBUG** | İstemcinin hatalı isteği, normal akış | Doğrulama hatası (400), kayıt bulunamadı (404) | Yok |
 
 Stack trace yalnızca ERROR seviyesinde basılır. Beklenen hatalarda stack trace yeni bilgi vermez ama log hacmini büyütür. Bu kural `GlobalExceptionHandler` içinde uygulanır ve `GlobalExceptionHandlerTest` ile doğrulanır.
