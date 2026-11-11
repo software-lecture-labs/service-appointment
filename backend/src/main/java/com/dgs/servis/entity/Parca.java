@@ -40,6 +40,8 @@ public class Parca {
 	/** Veritabanındaki kolon uzunluklarıyla aynı olmalı (V100__parca.sql). */
 	private static final int KOD_UZUNLUGU = 50;
 	private static final int AD_UZUNLUGU = 150;
+	private static final int FIYAT_TAM_BASAMAK = 10;
+	private static final int FIYAT_ONDALIK_BASAMAK = 2;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -54,7 +56,8 @@ public class Parca {
 	@Column(name = "stok_adedi", nullable = false)
 	private int stokAdedi;
 
-	@Column(name = "birim_fiyat", nullable = false, precision = 12, scale = 2)
+	@Column(name = "birim_fiyat", nullable = false,
+			precision = FIYAT_TAM_BASAMAK + FIYAT_ONDALIK_BASAMAK, scale = FIYAT_ONDALIK_BASAMAK)
 	private BigDecimal birimFiyat;
 
 	/** Aynı parçayı eşzamanlı güncelleyen işlemleri yakalamak için (optimistic locking). */
@@ -93,7 +96,16 @@ public class Parca {
 	 */
 	private static String gecerliKod(String kod) {
 		Objects.requireNonNull(kod, "Parça kodu boş olamaz");
-		return metniDogrula(kod.strip().toUpperCase(Locale.ROOT), "Parça kodu", KOD_UZUNLUGU);
+		return metniDogrula(kodNormallestir(kod), "Parça kodu", KOD_UZUNLUGU);
+	}
+
+	/**
+	 * Parça kodunun saklanan biçimi: baştaki/sondaki boşluksuz, büyük harf. Servis, "bu kod kayıtlı mı?"
+	 * sorgusunu da bu metotla yapar; veritabanı da aynı kuralı {@code V101} ile bilir ve uygulanmayan bir
+	 * kaydı reddeder.
+	 */
+	public static String kodNormallestir(String kod) {
+		return kod.strip().toUpperCase(Locale.ROOT);
 	}
 
 	private static String gecerliAd(String ad) {
@@ -112,12 +124,27 @@ public class Parca {
 		return temiz;
 	}
 
+	/**
+	 * Veritabanı kolonu {@code NUMERIC(12,2)}: fazla ondalık basamağı sessizce yuvarlar (10,005 → 10,01),
+	 * tam kısmı 10 basamağı aşan değeri ise "numeric field overflow" hatasıyla reddeder. İkisi de
+	 * burada, anlaşılır bir mesajla reddedilir. Sonundaki sıfırlar basamak sayılmaz (10,500 geçerlidir).
+	 * Saklanan değer her zaman 2 ondalık basamaklıdır.
+	 */
 	private static BigDecimal gecerliFiyat(BigDecimal fiyat) {
 		Objects.requireNonNull(fiyat, "Birim fiyat boş olamaz");
 		if (fiyat.signum() < 0) {
 			throw new IllegalArgumentException("Birim fiyat negatif olamaz");
 		}
-		return fiyat;
+		BigDecimal sade = fiyat.stripTrailingZeros();
+		if (sade.scale() > FIYAT_ONDALIK_BASAMAK) {
+			throw new IllegalArgumentException(
+					"Birim fiyat en fazla %d ondalık basamak içerebilir".formatted(FIYAT_ONDALIK_BASAMAK));
+		}
+		if (sade.precision() - sade.scale() > FIYAT_TAM_BASAMAK) {
+			throw new IllegalArgumentException(
+					"Birim fiyatın tam kısmı en fazla %d basamak olabilir".formatted(FIYAT_TAM_BASAMAK));
+		}
+		return fiyat.setScale(FIYAT_ONDALIK_BASAMAK);
 	}
 
 	/**
