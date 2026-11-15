@@ -1,7 +1,7 @@
-
 package com.dgs.servis.service;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import com.dgs.servis.dto.MusteriOlusturRequest;
 import com.dgs.servis.dto.MusteriResponse;
@@ -12,7 +12,5 @@ public interface MusteriService {
 
     MusteriResponse idIleGetir(Long id);
 
-    List<MusteriResponse> tumunuListele();
-
+    Page<MusteriResponse> tumunuListele(Pageable pageable);
 }
-

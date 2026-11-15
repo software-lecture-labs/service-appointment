@@ -1,8 +1,8 @@
 
 package com.dgs.servis.service.impl;
 
-import java.util.List;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,13 +51,10 @@ public class MusteriServiceImpl implements MusteriService {
     }
 
     @Override
-    public List<MusteriResponse> tumunuListele() {
-
-        return musteriRepository.findAll()
-                .stream()
-                .map(this::yanitaDonustur)
-                .toList();
-    }
+public Page<MusteriResponse> tumunuListele(Pageable pageable) {
+    return musteriRepository.findAll(pageable)
+            .map(this::yanitaDonustur);
+}
 
     private MusteriResponse yanitaDonustur(Musteri musteri) {
 

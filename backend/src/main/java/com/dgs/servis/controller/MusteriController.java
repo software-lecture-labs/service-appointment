@@ -2,8 +2,10 @@
 package com.dgs.servis.controller;
 
 import java.net.URI;
-import java.util.List;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -42,10 +44,10 @@ public class MusteriController {
 
     // Tüm müşterileri listeleme
     @GetMapping
-    public ResponseEntity<List<MusteriResponse>> tumunuListele() {
-
-        return ResponseEntity.ok(musteriService.tumunuListele());
-    }
+public PagedModel<MusteriResponse> tumunuListele(
+        @PageableDefault(size = 20, sort = "id") Pageable pageable) {
+    return new PagedModel<>(musteriService.tumunuListele(pageable));
+}
 
     // ID ile müşteri getirme
     @GetMapping("/{id}")
