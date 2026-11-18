@@ -289,16 +289,24 @@ class ParcaTest {
 				.limit(RASTGELE_DENEME_SAYISI);
 	}
 
-	/** Sınır değerler + son basamağı sıfır olmayan, 3 ila 6 ondalık basamaklı rastgele fiyatlar. */
+	/**
+	 * Sınır değerler + 3 ila 6 ondalık basamaklı rastgele fiyatlar. Son basamak 1-9 arasında seçilir:
+	 * sıfırla biten bir kesir (örn. 72153,620) {@code stripTrailingZeros} sonrası 2 ondalığa düşer, yani
+	 * geçerli bir fiyattır ve reddedilmesi beklenemez.
+	 */
 	static Stream<String> fazlaOndalikliFiyatlar() {
 		Stream<String> sinirlar = Stream.of("10.005", "0.001", "99.999", "1.234567", "0.0000001");
-		Stream<String> rastgeleler = Stream.generate(() -> {
-			int ondalik = rastgele(3, 6);
-			long tam = ThreadLocalRandom.current().nextLong(0, 100_000);
-			long kesir = ThreadLocalRandom.current().nextLong(1, (long) Math.pow(10, ondalik));
-			return tam + "." + "0".repeat(ondalik - Long.toString(kesir).length()) + kesir;
-		}).limit(RASTGELE_DENEME_SAYISI);
+		Stream<String> rastgeleler = Stream.generate(ParcaTest::rastgeleFazlaOndalikliFiyat)
+				.limit(RASTGELE_DENEME_SAYISI);
 		return Stream.concat(sinirlar, rastgeleler);
+	}
+
+	private static String rastgeleFazlaOndalikliFiyat() {
+		int ondalik = rastgele(3, 6);
+		long tam = ThreadLocalRandom.current().nextLong(0, 100_000);
+		long ilkBasamaklar = ThreadLocalRandom.current().nextLong(0, (long) Math.pow(10, ondalik - 1));
+		long kesir = ilkBasamaklar * 10 + rastgele(1, 9);
+		return tam + "." + "0".repeat(ondalik - Long.toString(kesir).length()) + kesir;
 	}
 
 	@ParameterizedTest(name = "fiyat={0}")
@@ -310,6 +318,17 @@ class ParcaTest {
 		assertThat(parca.getBirimFiyat().scale()).isEqualTo(2);
 	}
 
+	/** Üreteç doğru olmalı: reddedilmesi beklenen her fiyatın sade hali gerçekten 2'den fazla ondalık içermeli. */
+	@Test
+	void fazlaOndalikliFiyatUreteciHicGecerliFiyatUretmez() {
+		long gecerliUretilen = Stream.generate(ParcaTest::rastgeleFazlaOndalikliFiyat)
+				.limit(10_000)
+				.filter(fiyat -> new BigDecimal(fiyat).stripTrailingZeros().scale() <= 2)
+				.count();
+
+		assertThat(gecerliUretilen).isZero();
+	}
+
 	@ParameterizedTest(name = "fiyat={0}")
 	@MethodSource("fazlaOndalikliFiyatlar")
 	void olusturma_ikidenFazlaOndalikliFiyatiSessizceYuvarlamadanReddeder(String fiyat) {
@@ -319,7 +338,7 @@ class ParcaTest {
 	}
 
 	@ParameterizedTest(name = "fiyat={0}")
-	@ValueSource(strings = { "10.500", "10.50000", "10.5", "10", "1E+2", "0.000" })
+	@ValueSource(strings = { "10.500", "10.50000", "10.5", "10", "1E+2", "0.000", "72153.620", "0.010" })
 	void olusturma_sondakiSifirlarBasamakSayilmazVeFiyatIkiOndalikliSaklanir(String fiyat) {
 		Parca parca = new Parca("P-1", "Filtre", 1, new BigDecimal(fiyat));
 
