@@ -1,0 +1,45 @@
+name: CI
+
+# Her PR ve develop/main'e giden her push'ta derleme + tüm testler çalışır.
+# Testcontainers için Docker gerekir; ubuntu-latest çalıştırıcılarında hazır gelir.
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+# Aynı dal için yeni bir çalıştırma başlarsa eskisi iptal edilir.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Derle ve test et
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Derle ve testleri çalıştır
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+
+      - name: Test raporlarını sakla (yalnızca hata olursa)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-raporlari
+          path: backend/target/surefire-reports
+          retention-days: 7
