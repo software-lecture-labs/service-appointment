@@ -22,6 +22,9 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.http.HttpInputMessage;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 /**
@@ -79,6 +82,26 @@ class GlobalExceptionHandlerTest {
 
 		assertThat(yanit.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
 		assertThat(logSatiri(cikti, "Doğrulama hatası")).contains("DEBUG").contains("kod");
+	}
+
+	@Test
+	void bozukIstek400_debugOlarakStackTraceOlmadanLoglanir(CapturedOutput cikti) {
+		ResponseEntity<ApiError> yanit = handler.okunamayanIstek(
+				new HttpMessageNotReadableException("bozuk json", (HttpInputMessage) null), istek);
+
+		assertThat(yanit.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+		assertThat(logSatiri(cikti, "Okunamayan istek")).contains("DEBUG");
+		assertThat(cikti.getOut()).doesNotContain(STACK_TRACE_SATIRI);
+	}
+
+	@Test
+	void springIstekHatasi405_durumuKorurVeDebugOlarakLoglanir(CapturedOutput cikti) {
+		ResponseEntity<ApiError> yanit = handler.springIstekHatasi(
+				new HttpRequestMethodNotSupportedException("DELETE"), istek);
+
+		assertThat(yanit.getStatusCode()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
+		assertThat(logSatiri(cikti, "İstek reddedildi [405]")).contains("DEBUG");
+		assertThat(cikti.getOut()).doesNotContain(STACK_TRACE_SATIRI);
 	}
 
 	@Test
