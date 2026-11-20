@@ -1,13 +1,14 @@
 package com.dgs.servis.entity;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.util.UUID;
-
-import org.junit.jupiter.api.Test;
 
 import jakarta.validation.Validation;
 import jakarta.validation.ValidatorFactory;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MusteriTest {
 
@@ -22,35 +23,24 @@ class MusteriTest {
 
     @Test
     void sadeceBoslukIcerenAdReddedilir() {
-        Musteri musteri = gecerliMusteriOlustur();
-        musteri.setAd("   ");
-
-        dogrulamaHatasiniKontrolEt(musteri, "ad");
+        assertThrows(IllegalArgumentException.class,
+                () -> new Musteri("   ", "Yılmaz", "05551234567", null));
     }
 
     @Test
     void gecersizEpostaReddedilir() {
-        Musteri musteri = gecerliMusteriOlustur();
-        musteri.setEmail("gecersiz-eposta");
+        Musteri musteri = new Musteri("Deniz", "Yılmaz", "05551234567", "gecersiz-eposta");
 
-        dogrulamaHatasiniKontrolEt(musteri, "email");
-    }
-
-    private Musteri gecerliMusteriOlustur() {
-        Musteri musteri = new Musteri();
-        musteri.setAd("Deniz");
-        musteri.setSoyad("Yılmaz");
-        musteri.setTelefon("05551234567");
-        musteri.setEmail("musteri-" + UUID.randomUUID() + "@example.com");
-        return musteri;
-    }
-
-    private void dogrulamaHatasiniKontrolEt(Musteri musteri, String beklenenAlan) {
         try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
             var hatalar = factory.getValidator().validate(musteri);
 
             assertEquals(1, hatalar.size());
-            assertEquals(beklenenAlan, hatalar.iterator().next().getPropertyPath().toString());
+            assertEquals("email", hatalar.iterator().next().getPropertyPath().toString());
         }
+    }
+
+    private Musteri gecerliMusteriOlustur() {
+        return new Musteri("Deniz", "Yılmaz", "05551234567",
+                "musteri-" + UUID.randomUUID() + "@example.com");
     }
 }

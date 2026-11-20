@@ -18,8 +18,7 @@ import com.dgs.servis.service.MusteriService;
 @Transactional(readOnly = true)
 public class MusteriServiceImpl implements MusteriService {
 
-    private static final Set<String> SIRALANABILIR_ALANLAR =
-        Set.of("id", "ad", "soyad", "telefon", "email");
+    private static final Set<String> SIRALANABILIR_ALANLAR = Set.of("id", "ad", "soyad", "telefon", "email");
     private final MusteriRepository musteriRepository;
 
     public MusteriServiceImpl(MusteriRepository musteriRepository) {
@@ -30,13 +29,11 @@ public class MusteriServiceImpl implements MusteriService {
     @Transactional
     public MusteriResponse olustur(MusteriOlusturRequest request) {
 
-        Musteri musteri = new Musteri();
-
-        musteri.setAd(request.ad());
-        musteri.setSoyad(request.soyad());
-        musteri.setTelefon(request.telefon());
-        musteri.setEmail(request.email());
-
+        Musteri musteri = new Musteri(
+                request.ad(),
+                request.soyad(),
+                request.telefon(),
+                request.email());
         Musteri kaydedilenMusteri = musteriRepository.save(musteri);
 
         return yanitaDonustur(kaydedilenMusteri);
@@ -46,24 +43,22 @@ public class MusteriServiceImpl implements MusteriService {
     public MusteriResponse idIleGetir(Long id) {
 
         Musteri musteri = musteriRepository.findById(id)
-                .orElseThrow(() ->
-                        new KayitBulunamadiException("Müşteri", id)
-                );
+                .orElseThrow(() -> new KayitBulunamadiException("Müşteri", id));
 
         return yanitaDonustur(musteri);
     }
 
     @Override
-public Page<MusteriResponse> tumunuListele(Pageable pageable) {
-    for (var siralama : pageable.getSort()) {
-        if (!SIRALANABILIR_ALANLAR.contains(siralama.getProperty())) {
-            throw new GecersizSiralamaAlaniException();
+    public Page<MusteriResponse> tumunuListele(Pageable pageable) {
+        for (var siralama : pageable.getSort()) {
+            if (!SIRALANABILIR_ALANLAR.contains(siralama.getProperty())) {
+                throw new GecersizSiralamaAlaniException();
+            }
         }
-    }
 
-    return musteriRepository.findAll(pageable)
-            .map(this::yanitaDonustur);
-}
+        return musteriRepository.findAll(pageable)
+                .map(this::yanitaDonustur);
+    }
 
     private MusteriResponse yanitaDonustur(Musteri musteri) {
 
@@ -72,7 +67,7 @@ public Page<MusteriResponse> tumunuListele(Pageable pageable) {
                 musteri.getAd(),
                 musteri.getSoyad(),
                 musteri.getTelefon(),
-                musteri.getEmail()
-        );
+                musteri.getEmail());
     }
 }
+

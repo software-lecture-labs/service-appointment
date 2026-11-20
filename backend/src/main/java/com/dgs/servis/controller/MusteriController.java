@@ -44,10 +44,10 @@ public class MusteriController {
 
     // Tüm müşterileri listeleme
     @GetMapping
-public PagedModel<MusteriResponse> tumunuListele(
-        @PageableDefault(size = 20, sort = "id") Pageable pageable) {
-    return new PagedModel<>(musteriService.tumunuListele(pageable));
-}
+    public PagedModel<MusteriResponse> tumunuListele(
+            @PageableDefault(size = 20, sort = "id") Pageable pageable) {
+        return new PagedModel<>(musteriService.tumunuListele(pageable));
+    }
 
     // ID ile müşteri getirme
     @GetMapping("/{id}")
@@ -58,3 +58,4 @@ public PagedModel<MusteriResponse> tumunuListele(
     }
 
 }
+
