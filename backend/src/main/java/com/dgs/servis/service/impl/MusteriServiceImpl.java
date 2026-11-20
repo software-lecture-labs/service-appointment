@@ -5,7 +5,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.util.Set;
+import com.dgs.servis.exception.GecersizSiralamaAlaniException;
 import com.dgs.servis.dto.MusteriOlusturRequest;
 import com.dgs.servis.dto.MusteriResponse;
 import com.dgs.servis.entity.Musteri;
@@ -17,6 +18,8 @@ import com.dgs.servis.service.MusteriService;
 @Transactional(readOnly = true)
 public class MusteriServiceImpl implements MusteriService {
 
+    private static final Set<String> SIRALANABILIR_ALANLAR =
+        Set.of("id", "ad", "soyad", "telefon", "email");
     private final MusteriRepository musteriRepository;
 
     public MusteriServiceImpl(MusteriRepository musteriRepository) {
@@ -52,6 +55,12 @@ public class MusteriServiceImpl implements MusteriService {
 
     @Override
 public Page<MusteriResponse> tumunuListele(Pageable pageable) {
+    for (var siralama : pageable.getSort()) {
+        if (!SIRALANABILIR_ALANLAR.contains(siralama.getProperty())) {
+            throw new GecersizSiralamaAlaniException();
+        }
+    }
+
     return musteriRepository.findAll(pageable)
             .map(this::yanitaDonustur);
 }
