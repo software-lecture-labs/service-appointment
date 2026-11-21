@@ -8,4 +8,7 @@ public class GecersizSiralamaAlaniException extends UygulamaException {
         super(HttpStatus.BAD_REQUEST, "GECERSIZ_SIRALAMA_ALANI",
                 "Sıralama alanı id, ad, soyad, telefon veya email olmalıdır.");
     }
+    public GecersizSiralamaAlaniException(String mesaj) {
+    super(HttpStatus.BAD_REQUEST, "GECERSIZ_SIRALAMA_ALANI", mesaj);
+}
 }
