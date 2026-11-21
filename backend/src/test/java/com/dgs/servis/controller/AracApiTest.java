@@ -83,6 +83,40 @@ void bulunamayanAracIcin404Doner() throws Exception {
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.kod").value("KAYIT_BULUNAMADI"));
 }
+@Test
+void farkliSayfalarFarkliAraclariDoner() throws Exception {
+    Long musteriId = musteriOlustur();
+    String ilkPlaka = "34AB" + rastgelePlakaNumarasi();
+    String ikinciPlaka = "34CD" + rastgelePlakaNumarasi();
+
+    aracGonder(musteriId, ilkPlaka).andExpect(status().isCreated());
+    aracGonder(musteriId, ikinciPlaka).andExpect(status().isCreated());
+
+    mvc.perform(get("/api/araclar")
+                    .param("page", "0")
+                    .param("size", "1")
+                    .param("sort", "id,asc"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].plaka").value(ilkPlaka))
+            .andExpect(jsonPath("$.page.number").value(0));
+
+    mvc.perform(get("/api/araclar")
+                    .param("page", "1")
+                    .param("size", "1")
+                    .param("sort", "id,asc"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].plaka").value(ikinciPlaka))
+            .andExpect(jsonPath("$.page.number").value(1));
+}
+
+@Test
+void gecersizSiralamaAlaniIcin400Doner() throws Exception {
+    mvc.perform(get("/api/araclar").param("sort", "bilinmeyenAlan"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.kod").value("GECERSIZ_SIRALAMA_ALANI"));
+}
     private Long musteriOlustur() {
         String eposta = "musteri-" + UUID.randomUUID() + "@example.com";
         return musteriRepository.save(

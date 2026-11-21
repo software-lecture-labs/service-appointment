@@ -12,6 +12,10 @@ import com.dgs.servis.service.AracService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import java.util.Set;
+import com.dgs.servis.exception.GecersizSiralamaAlaniException;
 
 @Service
 public class AracServiceImpl implements AracService {
@@ -49,6 +53,20 @@ public class AracServiceImpl implements AracService {
         return yanitaDonustur(arac);
     }
 
+@Override
+@Transactional(readOnly = true)
+public Page<AracResponse> tumunuListele(Pageable pageable) {
+    Set<String> izinliAlanlar = Set.of("id", "plaka", "marka", "model");
+
+    for (var siralama : pageable.getSort()) {
+        if (!izinliAlanlar.contains(siralama.getProperty())) {
+            throw new GecersizSiralamaAlaniException(
+                    "Sıralama alanı id, plaka, marka veya model olmalıdır.");
+        }
+    }
+
+    return aracRepository.findAll(pageable).map(this::yanitaDonustur);
+}
     private AracResponse yanitaDonustur(Arac arac) {
         return new AracResponse(
                 arac.getId(),
