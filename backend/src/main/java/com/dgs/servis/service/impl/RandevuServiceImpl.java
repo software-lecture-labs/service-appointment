@@ -8,7 +8,9 @@ import com.dgs.servis.exception.KayitBulunamadiException;
 import com.dgs.servis.repository.AracRepository;
 import com.dgs.servis.repository.RandevuRepository;
 import com.dgs.servis.service.RandevuService;
-
+import com.dgs.servis.exception.GecersizSiralamaAlaniException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +44,20 @@ public class RandevuServiceImpl implements RandevuService {
                 .orElseThrow(() -> new KayitBulunamadiException("Randevu", id));
 
         return yanitaDonustur(randevu);
+    }
+
+        @Override
+    @Transactional(readOnly = true)
+    public Page<RandevuResponse> tumunuListele(Pageable pageable) {
+        for (var siralama : pageable.getSort()) {
+            String alan = siralama.getProperty();
+            if (!"id".equals(alan) && !"randevuZamani".equals(alan)) {
+                throw new GecersizSiralamaAlaniException(
+                        "Sıralama alanı id veya randevuZamani olmalıdır.");
+            }
+        }
+
+        return randevuRepository.findAll(pageable).map(this::yanitaDonustur);
     }
 
     private RandevuResponse yanitaDonustur(Randevu randevu) {

@@ -99,6 +99,40 @@ void bulunamayanRandevuIcin404Doner() throws Exception {
             .andExpect(status().isNotFound())
             .andExpect(jsonPath("$.kod").value("KAYIT_BULUNAMADI"));
 }
+
+@Test
+void randevularTarihSirasiylaSayfalanir() throws Exception {
+    Long ilkAracId = aracOlustur();
+    Long ikinciAracId = aracOlustur();
+    OffsetDateTime ilkTarih = OffsetDateTime.now(ZoneOffset.UTC).plusDays(1);
+    OffsetDateTime ikinciTarih = ilkTarih.plusDays(1);
+
+    randevuGonder(ikinciAracId, ikinciTarih).andExpect(status().isCreated());
+    randevuGonder(ilkAracId, ilkTarih).andExpect(status().isCreated());
+
+    mvc.perform(get("/api/randevular")
+                    .param("page", "0")
+                    .param("size", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].aracId").value(ilkAracId))
+            .andExpect(jsonPath("$.page.number").value(0));
+
+    mvc.perform(get("/api/randevular")
+                    .param("page", "1")
+                    .param("size", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.content.length()").value(1))
+            .andExpect(jsonPath("$.content[0].aracId").value(ikinciAracId))
+            .andExpect(jsonPath("$.page.number").value(1));
+}
+
+@Test
+void gecersizSiralamaAlaniIcin400Doner() throws Exception {
+    mvc.perform(get("/api/randevular").param("sort", "bilinmeyenAlan"))
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.kod").value("GECERSIZ_SIRALAMA_ALANI"));
+}
     private Long aracOlustur() {
         String benzersizDeger = UUID.randomUUID().toString();
         Musteri musteri = musteriRepository.save(new Musteri(
