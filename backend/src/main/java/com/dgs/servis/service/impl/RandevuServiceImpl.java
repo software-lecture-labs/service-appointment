@@ -46,7 +46,7 @@ public class RandevuServiceImpl implements RandevuService {
         return yanitaDonustur(randevu);
     }
 
-        @Override
+    @Override
     @Transactional(readOnly = true)
     public Page<RandevuResponse> tumunuListele(Pageable pageable) {
         for (var siralama : pageable.getSort()) {
@@ -60,12 +60,22 @@ public class RandevuServiceImpl implements RandevuService {
         return randevuRepository.findAll(pageable).map(this::yanitaDonustur);
     }
 
+    @Override
+    @Transactional
+    public RandevuResponse iptalEt(Long id) {
+        Randevu randevu = randevuRepository.findById(id)
+                .orElseThrow(() -> new KayitBulunamadiException("Randevu", id));
+
+        randevu.iptalEt();
+        return yanitaDonustur(randevu);
+    }
+
     private RandevuResponse yanitaDonustur(Randevu randevu) {
         return new RandevuResponse(
                 randevu.getId(),
                 randevu.getArac().getId(),
                 randevu.getRandevuZamani(),
-                randevu.getServisTalebi()
-        );
+                randevu.getServisTalebi(),
+                randevu.getDurum());
     }
 }

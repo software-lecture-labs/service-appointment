@@ -6,6 +6,7 @@ import com.dgs.servis.service.RandevuService;
 
 import jakarta.validation.Valid;
 
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -39,13 +40,20 @@ public class RandevuController {
         URI location = URI.create("/api/randevular/" + randevu.id());
 return ResponseEntity.created(location).body(randevu);
     }
+
     @GetMapping("/{id}")
-public ResponseEntity<RandevuResponse> idIleGetir(@PathVariable("id") Long id) {
-    return ResponseEntity.ok(randevuService.idIleGetir(id));
-}
+    public ResponseEntity<RandevuResponse> idIleGetir(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(randevuService.idIleGetir(id));
+    }
+
     @GetMapping
     public PagedModel<RandevuResponse> tumunuListele(
-            @PageableDefault(size = 20, sort = {"randevuZamani", "id"}) Pageable pageable) {
+            @PageableDefault(size = 20, sort = { "randevuZamani", "id" }) Pageable pageable) {
         return new PagedModel<>(randevuService.tumunuListele(pageable));
+    }
+
+    @PatchMapping("/{id}/iptal")
+    public ResponseEntity<RandevuResponse> iptalEt(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(randevuService.iptalEt(id));
     }
 }
