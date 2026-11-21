@@ -10,6 +10,7 @@ import com.dgs.servis.entity.Musteri;
 import com.dgs.servis.repository.AracRepository;
 import com.dgs.servis.repository.MusteriRepository;
 import com.jayway.jsonpath.JsonPath;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 @SpringBootTest
@@ -48,6 +50,10 @@ class RandevuApiTest {
 
         randevuGonder(aracId, yarin)
                 .andExpect(status().isCreated())
+                .andExpect(result -> {
+    Number id = JsonPath.read(result.getResponse().getContentAsString(), "$.id");
+    assertEquals("/api/randevular/" + id, result.getResponse().getHeader("Location"));
+})
                 .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.aracId").value(aracId))
                 .andExpect(jsonPath("$.servisTalebi").value("Periyodik bakım"));

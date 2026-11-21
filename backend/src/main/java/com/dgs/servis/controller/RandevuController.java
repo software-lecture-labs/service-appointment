@@ -14,6 +14,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+
+
+import java.net.URI;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
@@ -32,7 +36,8 @@ public class RandevuController {
     public ResponseEntity<RandevuResponse> olustur(
             @Valid @RequestBody RandevuOlusturRequest request) {
         RandevuResponse randevu = randevuService.olustur(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(randevu);
+        URI location = URI.create("/api/randevular/" + randevu.id());
+return ResponseEntity.created(location).body(randevu);
     }
     @GetMapping("/{id}")
 public ResponseEntity<RandevuResponse> idIleGetir(@PathVariable("id") Long id) {
