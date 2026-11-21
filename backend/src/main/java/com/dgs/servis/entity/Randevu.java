@@ -17,7 +17,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-
 @Entity
 @Table(name = "randevular")
 @Getter
@@ -38,8 +37,8 @@ public class Randevu {
     @Column(name = "servis_talebi", nullable = false, length = 500)
     private String servisTalebi;
     @Enumerated(EnumType.STRING)
-@Column(nullable = false, length = 20)
-private RandevuDurumu durum = RandevuDurumu.PLANLANDI;
+    @Column(nullable = false, length = 20)
+    private RandevuDurumu durum = RandevuDurumu.PLANLANDI;
 
     public Randevu(Arac arac, OffsetDateTime randevuZamani, String servisTalebi) {
         if (arac == null) {
@@ -61,7 +60,8 @@ private RandevuDurumu durum = RandevuDurumu.PLANLANDI;
         this.randevuZamani = randevuZamani;
         this.servisTalebi = temizTalep;
     }
-        public void iptalEt() {
+
+    public void iptalEt() {
         this.durum = RandevuDurumu.IPTAL_EDILDI;
     }
 }

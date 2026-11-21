@@ -35,16 +35,19 @@ public class RandevuController {
         RandevuResponse randevu = randevuService.olustur(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(randevu);
     }
+
     @GetMapping("/{id}")
-public ResponseEntity<RandevuResponse> idIleGetir(@PathVariable("id") Long id) {
-    return ResponseEntity.ok(randevuService.idIleGetir(id));
-}
+    public ResponseEntity<RandevuResponse> idIleGetir(@PathVariable("id") Long id) {
+        return ResponseEntity.ok(randevuService.idIleGetir(id));
+    }
+
     @GetMapping
     public PagedModel<RandevuResponse> tumunuListele(
-            @PageableDefault(size = 20, sort = {"randevuZamani", "id"}) Pageable pageable) {
+            @PageableDefault(size = 20, sort = { "randevuZamani", "id" }) Pageable pageable) {
         return new PagedModel<>(randevuService.tumunuListele(pageable));
     }
-        @PatchMapping("/{id}/iptal")
+
+    @PatchMapping("/{id}/iptal")
     public ResponseEntity<RandevuResponse> iptalEt(@PathVariable("id") Long id) {
         return ResponseEntity.ok(randevuService.iptalEt(id));
     }

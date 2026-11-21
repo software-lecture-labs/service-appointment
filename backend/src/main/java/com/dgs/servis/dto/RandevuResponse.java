@@ -8,6 +8,5 @@ public record RandevuResponse(
         Long aracId,
         OffsetDateTime randevuZamani,
         String servisTalebi,
-        RandevuDurumu durum
-) {
+        RandevuDurumu durum) {
 }
