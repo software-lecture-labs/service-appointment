@@ -11,10 +11,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
 
 @Entity
 @Table(name = "randevular")
@@ -35,6 +37,9 @@ public class Randevu {
 
     @Column(name = "servis_talebi", nullable = false, length = 500)
     private String servisTalebi;
+    @Enumerated(EnumType.STRING)
+@Column(nullable = false, length = 20)
+private RandevuDurumu durum = RandevuDurumu.PLANLANDI;
 
     public Randevu(Arac arac, OffsetDateTime randevuZamani, String servisTalebi) {
         if (arac == null) {
@@ -55,5 +60,8 @@ public class Randevu {
         this.arac = arac;
         this.randevuZamani = randevuZamani;
         this.servisTalebi = temizTalep;
+    }
+        public void iptalEt() {
+        this.durum = RandevuDurumu.IPTAL_EDILDI;
     }
 }

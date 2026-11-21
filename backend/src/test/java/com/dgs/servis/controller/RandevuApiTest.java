@@ -26,6 +26,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(TestcontainersConfiguration.class)
@@ -40,6 +44,8 @@ class RandevuApiTest {
 
     @Autowired
     private AracRepository aracRepository;
+        @PersistenceContext
+    private EntityManager entityManager;
 
     @Test
     void mevcutAracaRandevuOlusturulur() throws Exception {
@@ -133,6 +139,43 @@ void gecersizSiralamaAlaniIcin400Doner() throws Exception {
             .andExpect(status().isBadRequest())
             .andExpect(jsonPath("$.kod").value("GECERSIZ_SIRALAMA_ALANI"));
 }
+    @Test
+    void randevuIptalEdilirVeDurumuVeritabaninaYazilir() throws Exception {
+        Long aracId = aracOlustur();
+        OffsetDateTime yarin = OffsetDateTime.now(ZoneOffset.UTC).plusDays(1);
+
+        String yanit = randevuGonder(aracId, yarin)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.durum").value("PLANLANDI"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        Number randevuId = JsonPath.read(yanit, "$.id");
+
+        mvc.perform(patch("/api/randevular/{id}/iptal", randevuId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.durum").value("IPTAL_EDILDI"));
+
+        entityManager.flush();
+        entityManager.clear();
+
+        mvc.perform(get("/api/randevular/{id}", randevuId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.durum").value("IPTAL_EDILDI"));
+
+        mvc.perform(patch("/api/randevular/{id}/iptal", randevuId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.durum").value("IPTAL_EDILDI"));
+    }
+
+    @Test
+    void bulunamayanRandevuIptalEdilirse404Doner() throws Exception {
+        mvc.perform(patch("/api/randevular/{id}/iptal", Long.MAX_VALUE))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.kod").value("KAYIT_BULUNAMADI"));
+    }
+
     private Long aracOlustur() {
         String benzersizDeger = UUID.randomUUID().toString();
         Musteri musteri = musteriRepository.save(new Musteri(

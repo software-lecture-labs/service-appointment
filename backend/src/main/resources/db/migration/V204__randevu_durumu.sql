@@ -1,0 +1,4 @@
+ALTER TABLE randevular
+    ADD COLUMN durum VARCHAR(20) NOT NULL DEFAULT 'PLANLANDI',
+    ADD CONSTRAINT ck_randevular_durum
+        CHECK (durum IN ('PLANLANDI', 'IPTAL_EDILDI'));

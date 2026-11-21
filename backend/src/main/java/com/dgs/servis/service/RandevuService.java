@@ -9,5 +9,6 @@ public interface RandevuService {
 
     RandevuResponse olustur(RandevuOlusturRequest request);
     RandevuResponse idIleGetir(Long id);
+        RandevuResponse iptalEt(Long id);
     Page<RandevuResponse> tumunuListele(Pageable pageable);
 }
