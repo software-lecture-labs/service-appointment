@@ -24,7 +24,7 @@ public class AracServiceImpl implements AracService {
         this.musteriRepository = musteriRepository;
     }
 
-    @Override
+        @Override
     @Transactional
     public AracResponse olustur(AracOlusturRequest request) {
         Musteri musteri = musteriRepository.findById(request.musteriId())
@@ -37,13 +37,25 @@ public class AracServiceImpl implements AracService {
         }
 
         Arac kaydedilenArac = aracRepository.save(arac);
+        return yanitaDonustur(kaydedilenArac);
+    }
 
+    @Override
+    @Transactional(readOnly = true)
+    public AracResponse idIleGetir(Long id) {
+        Arac arac = aracRepository.findById(id)
+                .orElseThrow(() -> new KayitBulunamadiException("Araç", id));
+
+        return yanitaDonustur(arac);
+    }
+
+    private AracResponse yanitaDonustur(Arac arac) {
         return new AracResponse(
-                kaydedilenArac.getId(),
-                musteri.getId(),
-                kaydedilenArac.getPlaka(),
-                kaydedilenArac.getMarka(),
-                kaydedilenArac.getModel()
+                arac.getId(),
+                arac.getMusteri().getId(),
+                arac.getPlaka(),
+                arac.getMarka(),
+                arac.getModel()
         );
     }
 }

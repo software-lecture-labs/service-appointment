@@ -1,11 +1,10 @@
 package com.dgs.servis.controller;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
-
-import com.dgs.servis.TestcontainersConfiguration;
-import com.dgs.servis.entity.Musteri;
-import com.dgs.servis.repository.MusteriRepository;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,9 +16,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import com.dgs.servis.TestcontainersConfiguration;
+import com.dgs.servis.entity.Musteri;
+import com.dgs.servis.repository.MusteriRepository;
+import com.jayway.jsonpath.JsonPath;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -34,16 +34,28 @@ class AracApiTest {
     private MusteriRepository musteriRepository;
 
     @Test
-    void mevcutMusteriyeAracKaydedilir() throws Exception {
-        Long musteriId = musteriOlustur();
-        int plakaNumarasi = rastgelePlakaNumarasi();
+void mevcutMusteriyeAracKaydedilirVeIdIleGetirilir() throws Exception {
+    Long musteriId = musteriOlustur();
+    int plakaNumarasi = rastgelePlakaNumarasi();
+    String beklenenPlaka = "34AB" + plakaNumarasi;
 
-        aracGonder(musteriId, "34 ab " + plakaNumarasi)
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").isNumber())
-                .andExpect(jsonPath("$.musteriId").value(musteriId))
-                .andExpect(jsonPath("$.plaka").value("34AB" + plakaNumarasi));
-    }
+    String yanit = aracGonder(musteriId, "34 ab " + plakaNumarasi)
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").isNumber())
+            .andExpect(jsonPath("$.musteriId").value(musteriId))
+            .andExpect(jsonPath("$.plaka").value(beklenenPlaka))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    Number aracId = JsonPath.read(yanit, "$.id");
+
+    mvc.perform(get("/api/araclar/{id}", aracId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(aracId))
+            .andExpect(jsonPath("$.musteriId").value(musteriId))
+            .andExpect(jsonPath("$.plaka").value(beklenenPlaka));
+}
 
     @Test
     void ayniPlakaFarkliBicimdeGonderilince409Doner() throws Exception {
@@ -65,6 +77,12 @@ class AracApiTest {
                 .andExpect(jsonPath("$.kod").value("KAYIT_BULUNAMADI"));
     }
 
+    @Test
+void bulunamayanAracIcin404Doner() throws Exception {
+    mvc.perform(get("/api/araclar/{id}", Long.MAX_VALUE))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.kod").value("KAYIT_BULUNAMADI"));
+}
     private Long musteriOlustur() {
         String eposta = "musteri-" + UUID.randomUUID() + "@example.com";
         return musteriRepository.save(

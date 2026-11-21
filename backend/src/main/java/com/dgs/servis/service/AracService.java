@@ -6,4 +6,5 @@ import com.dgs.servis.dto.AracResponse;
 public interface AracService {
 
     AracResponse olustur(AracOlusturRequest request);
+    AracResponse idIleGetir(Long id);
 }

@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @RestController
 @RequestMapping("/api/araclar")
@@ -29,4 +31,8 @@ public class AracController {
         AracResponse arac = aracService.olustur(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(arac);
     }
+    @GetMapping("/{id}")
+public ResponseEntity<AracResponse> idIleGetir(@PathVariable("id") Long id) {
+    return ResponseEntity.ok(aracService.idIleGetir(id));
+}
 }
