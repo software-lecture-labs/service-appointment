@@ -32,13 +32,24 @@ public class RandevuServiceImpl implements RandevuService {
                 .orElseThrow(() -> new KayitBulunamadiException("Araç", request.aracId()));
 
         Randevu randevu = new Randevu(arac, request.randevuZamani(), request.servisTalebi());
-        Randevu kaydedilen = randevuRepository.save(randevu);
+        return yanitaDonustur(randevuRepository.save(randevu));
+    }
 
+    @Override
+    @Transactional(readOnly = true)
+    public RandevuResponse idIleGetir(Long id) {
+        Randevu randevu = randevuRepository.findById(id)
+                .orElseThrow(() -> new KayitBulunamadiException("Randevu", id));
+
+        return yanitaDonustur(randevu);
+    }
+
+    private RandevuResponse yanitaDonustur(Randevu randevu) {
         return new RandevuResponse(
-                kaydedilen.getId(),
-                arac.getId(),
-                kaydedilen.getRandevuZamani(),
-                kaydedilen.getServisTalebi()
+                randevu.getId(),
+                randevu.getArac().getId(),
+                randevu.getRandevuZamani(),
+                randevu.getServisTalebi()
         );
     }
 }

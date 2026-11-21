@@ -9,6 +9,7 @@ import com.dgs.servis.entity.Arac;
 import com.dgs.servis.entity.Musteri;
 import com.dgs.servis.repository.AracRepository;
 import com.dgs.servis.repository.MusteriRepository;
+import com.jayway.jsonpath.JsonPath;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -71,6 +73,32 @@ class RandevuApiTest {
                 .andExpect(jsonPath("$.kod").value("KAYIT_BULUNAMADI"));
     }
 
+    @Test
+void kaydedilenRandevuIdIleGetirilir() throws Exception {
+    Long aracId = aracOlustur();
+    OffsetDateTime yarin = OffsetDateTime.now(ZoneOffset.UTC).plusDays(1);
+
+    String yanit = randevuGonder(aracId, yarin)
+            .andExpect(status().isCreated())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    Number randevuId = JsonPath.read(yanit, "$.id");
+
+    mvc.perform(get("/api/randevular/{id}", randevuId))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(randevuId))
+            .andExpect(jsonPath("$.aracId").value(aracId))
+            .andExpect(jsonPath("$.servisTalebi").value("Periyodik bakım"));
+}
+
+@Test
+void bulunamayanRandevuIcin404Doner() throws Exception {
+    mvc.perform(get("/api/randevular/{id}", Long.MAX_VALUE))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.kod").value("KAYIT_BULUNAMADI"));
+}
     private Long aracOlustur() {
         String benzersizDeger = UUID.randomUUID().toString();
         Musteri musteri = musteriRepository.save(new Musteri(

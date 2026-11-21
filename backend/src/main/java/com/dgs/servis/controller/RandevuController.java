@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @RestController
 @RequestMapping("/api/randevular")
@@ -29,4 +31,8 @@ public class RandevuController {
         RandevuResponse randevu = randevuService.olustur(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(randevu);
     }
+    @GetMapping("/{id}")
+public ResponseEntity<RandevuResponse> idIleGetir(@PathVariable("id") Long id) {
+    return ResponseEntity.ok(randevuService.idIleGetir(id));
+}
 }
