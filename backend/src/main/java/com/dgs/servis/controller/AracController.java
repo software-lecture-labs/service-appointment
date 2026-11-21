@@ -6,7 +6,6 @@ import com.dgs.servis.service.AracService;
 
 import jakarta.validation.Valid;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,7 +16,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
-
+import java.net.URI;
 @RestController
 @RequestMapping("/api/araclar")
 public class AracController {
@@ -32,7 +31,8 @@ public class AracController {
     public ResponseEntity<AracResponse> olustur(
             @Valid @RequestBody AracOlusturRequest request) {
         AracResponse arac = aracService.olustur(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(arac);
+        URI konum = URI.create("/api/araclar/" + arac.id());
+return ResponseEntity.created(konum).body(arac);
     }
     @GetMapping("/{id}")
 public ResponseEntity<AracResponse> idIleGetir(@PathVariable("id") Long id) {

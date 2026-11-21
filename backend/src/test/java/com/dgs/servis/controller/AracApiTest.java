@@ -1,10 +1,12 @@
 package com.dgs.servis.controller;
 
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+
+import com.dgs.servis.TestcontainersConfiguration;
+import com.dgs.servis.entity.Musteri;
+import com.dgs.servis.repository.MusteriRepository;
+import com.jayway.jsonpath.JsonPath;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,10 +18,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.dgs.servis.TestcontainersConfiguration;
-import com.dgs.servis.entity.Musteri;
-import com.dgs.servis.repository.MusteriRepository;
-import com.jayway.jsonpath.JsonPath;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -34,28 +37,29 @@ class AracApiTest {
     private MusteriRepository musteriRepository;
 
     @Test
-void mevcutMusteriyeAracKaydedilirVeIdIleGetirilir() throws Exception {
-    Long musteriId = musteriOlustur();
-    int plakaNumarasi = rastgelePlakaNumarasi();
-    String beklenenPlaka = "34AB" + plakaNumarasi;
+    void mevcutMusteriyeAracKaydedilirVeIdIleGetirilir() throws Exception {
+        Long musteriId = musteriOlustur();
+        int plakaNumarasi = rastgelePlakaNumarasi();
+        String beklenenPlaka = "34AB" + plakaNumarasi;
 
-    String yanit = aracGonder(musteriId, "34 ab " + plakaNumarasi)
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.id").isNumber())
-            .andExpect(jsonPath("$.musteriId").value(musteriId))
-            .andExpect(jsonPath("$.plaka").value(beklenenPlaka))
-            .andReturn()
-            .getResponse()
-            .getContentAsString();
+        var yanit = aracGonder(musteriId, "34 ab " + plakaNumarasi)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").isNumber())
+                .andExpect(jsonPath("$.musteriId").value(musteriId))
+                .andExpect(jsonPath("$.plaka").value(beklenenPlaka))
+                .andReturn()
+                .getResponse();
 
-    Number aracId = JsonPath.read(yanit, "$.id");
+        Number aracId = JsonPath.read(yanit.getContentAsString(), "$.id");
+        String konum = yanit.getHeader("Location");
+        assertEquals("/api/araclar/" + aracId, konum);
 
-    mvc.perform(get("/api/araclar/{id}", aracId))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value(aracId))
-            .andExpect(jsonPath("$.musteriId").value(musteriId))
-            .andExpect(jsonPath("$.plaka").value(beklenenPlaka));
-}
+        mvc.perform(get(konum))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(aracId))
+                .andExpect(jsonPath("$.musteriId").value(musteriId))
+                .andExpect(jsonPath("$.plaka").value(beklenenPlaka));
+    }
 
     @Test
     void ayniPlakaFarkliBicimdeGonderilince409Doner() throws Exception {
@@ -78,45 +82,47 @@ void mevcutMusteriyeAracKaydedilirVeIdIleGetirilir() throws Exception {
     }
 
     @Test
-void bulunamayanAracIcin404Doner() throws Exception {
-    mvc.perform(get("/api/araclar/{id}", Long.MAX_VALUE))
-            .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.kod").value("KAYIT_BULUNAMADI"));
-}
-@Test
-void farkliSayfalarFarkliAraclariDoner() throws Exception {
-    Long musteriId = musteriOlustur();
-    String ilkPlaka = "34AB" + rastgelePlakaNumarasi();
-    String ikinciPlaka = "34CD" + rastgelePlakaNumarasi();
+    void bulunamayanAracIcin404Doner() throws Exception {
+        mvc.perform(get("/api/araclar/{id}", Long.MAX_VALUE))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.kod").value("KAYIT_BULUNAMADI"));
+    }
 
-    aracGonder(musteriId, ilkPlaka).andExpect(status().isCreated());
-    aracGonder(musteriId, ikinciPlaka).andExpect(status().isCreated());
+    @Test
+    void farkliSayfalarFarkliAraclariDoner() throws Exception {
+        Long musteriId = musteriOlustur();
+        String ilkPlaka = "34AB" + rastgelePlakaNumarasi();
+        String ikinciPlaka = "34CD" + rastgelePlakaNumarasi();
 
-    mvc.perform(get("/api/araclar")
-                    .param("page", "0")
-                    .param("size", "1")
-                    .param("sort", "id,asc"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.content.length()").value(1))
-            .andExpect(jsonPath("$.content[0].plaka").value(ilkPlaka))
-            .andExpect(jsonPath("$.page.number").value(0));
+        aracGonder(musteriId, ilkPlaka).andExpect(status().isCreated());
+        aracGonder(musteriId, ikinciPlaka).andExpect(status().isCreated());
 
-    mvc.perform(get("/api/araclar")
-                    .param("page", "1")
-                    .param("size", "1")
-                    .param("sort", "id,asc"))
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.content.length()").value(1))
-            .andExpect(jsonPath("$.content[0].plaka").value(ikinciPlaka))
-            .andExpect(jsonPath("$.page.number").value(1));
-}
+        mvc.perform(get("/api/araclar")
+                        .param("page", "0")
+                        .param("size", "1")
+                        .param("sort", "id,asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].plaka").value(ilkPlaka))
+                .andExpect(jsonPath("$.page.number").value(0));
 
-@Test
-void gecersizSiralamaAlaniIcin400Doner() throws Exception {
-    mvc.perform(get("/api/araclar").param("sort", "bilinmeyenAlan"))
-            .andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.kod").value("GECERSIZ_SIRALAMA_ALANI"));
-}
+        mvc.perform(get("/api/araclar")
+                        .param("page", "1")
+                        .param("size", "1")
+                        .param("sort", "id,asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].plaka").value(ikinciPlaka))
+                .andExpect(jsonPath("$.page.number").value(1));
+    }
+
+    @Test
+    void gecersizSiralamaAlaniIcin400Doner() throws Exception {
+        mvc.perform(get("/api/araclar").param("sort", "bilinmeyenAlan"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.kod").value("GECERSIZ_SIRALAMA_ALANI"));
+    }
+
     private Long musteriOlustur() {
         String eposta = "musteri-" + UUID.randomUUID() + "@example.com";
         return musteriRepository.save(
