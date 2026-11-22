@@ -13,6 +13,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.dgs.servis.exception.KayitZatenVarException;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @Service
 public class RandevuServiceImpl implements RandevuService {
@@ -34,7 +37,19 @@ public class RandevuServiceImpl implements RandevuService {
                 .orElseThrow(() -> new KayitBulunamadiException("Araç", request.aracId()));
 
         Randevu randevu = new Randevu(arac, request.randevuZamani(), request.servisTalebi());
-        return yanitaDonustur(randevuRepository.save(randevu));
+        try {
+    return yanitaDonustur(randevuRepository.saveAndFlush(randevu));
+} catch (DataIntegrityViolationException ex) {
+    for (Throwable neden = ex.getCause(); neden != null; neden = neden.getCause()) {
+        if (neden instanceof ConstraintViolationException ihlal
+                && "uq_randevular_aktif_arac_zaman".equals(ihlal.getConstraintName())) {
+            throw new KayitZatenVarException(
+                    "Bu araç için aynı saatte aktif bir randevu zaten var.");
+        }
+    }
+
+    throw ex;
+}
     }
 
     @Override
