@@ -123,6 +123,8 @@ cd backend
 
 Entegrasyon testleri Testcontainers ile gerçek bir PostgreSQL üzerinde çalışır, bu yüzden Docker'ın açık olması gerekir.
 
+Aynı komut GitHub Actions üzerinde (`.github/workflows/ci.yml`) her pull request'te ve `develop`/`main`'e giden her push'ta otomatik çalışır. Testler kırmızıysa PR'ın "Checks" bölümünde görünür, böylece bozuk kod fark edilmeden birleşmez. Hata durumunda test raporları 7 gün boyunca indirilebilir.
+
 ## Transactional işlem
 
 _(Geliştirme sürecinde eklenecek: iş emri kapatılırken stok düşümü, fatura oluşturma ve araç durumunun güncellenmesi tek transaction içinde yapılır. Herhangi bir adım başarısız olursa tüm işlem geri alınır.)_
