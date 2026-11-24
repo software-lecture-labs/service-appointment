@@ -27,7 +27,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -37,7 +36,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @Import(TestcontainersConfiguration.class)
 @Transactional
 class RandevuApiTest {
-
+        
     @Autowired
     private MockMvc mvc;
 
@@ -110,6 +109,40 @@ class RandevuApiTest {
         mvc.perform(get("/api/randevular/{id}", Long.MAX_VALUE))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.kod").value("KAYIT_BULUNAMADI"));
+    }
+    @Test
+    void ayniAracVeSaatteIkinciAktifRandevuOlusturulamaz() throws Exception {
+        Long aracId = aracOlustur();
+        OffsetDateTime zaman = OffsetDateTime.now(ZoneOffset.UTC).plusDays(2).withNano(0);
+
+        randevuGonder(aracId, zaman)
+                .andExpect(status().isCreated());
+
+        randevuGonder(aracId, zaman)
+                .andExpect(status().isConflict());
+    }
+    @Test
+    void iptalEdilenRandevununSaatineYenidenRandevuAlinabilir() throws Exception {
+        Long aracId = aracOlustur();
+        OffsetDateTime zaman = OffsetDateTime.now(ZoneOffset.UTC).plusDays(2).withNano(0);
+
+        String govde = randevuGonder(aracId, zaman)
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        Number randevuId = JsonPath.read(govde, "$.id");
+
+        mvc.perform(patch("/api/randevular/{id}/iptal", randevuId))
+
+                .andExpect(status().isOk());
+                        entityManager.flush();
+        entityManager.clear();
+                        mvc.perform(get("/api/randevular/{id}", randevuId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.durum").value("IPTAL_EDILDI"));
+
+        randevuGonder(aracId, zaman)
+                .andExpect(status().isCreated());
     }
 
     @Test
