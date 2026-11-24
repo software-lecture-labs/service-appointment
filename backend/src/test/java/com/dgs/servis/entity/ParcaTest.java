@@ -283,4 +283,93 @@ class ParcaTest {
 		assertThat(parca.getAd()).isEqualTo("Filtre");
 	}
 
+	/** Her çalışmada, 2 ondalık basamağa ve 10 basamaklı tam kısma sığan rastgele fiyatlar. */
+	static Stream<BigDecimal> rastgeleGecerliFiyatlar() {
+		return Stream.generate(() -> BigDecimal.valueOf(ThreadLocalRandom.current().nextLong(0, 1_000_000_000_000L), 2))
+				.limit(RASTGELE_DENEME_SAYISI);
+	}
+
+	/**
+	 * Sınır değerler + 3 ila 6 ondalık basamaklı rastgele fiyatlar. Son basamak 1-9 arasında seçilir:
+	 * sıfırla biten bir kesir (örn. 72153,620) {@code stripTrailingZeros} sonrası 2 ondalığa düşer, yani
+	 * geçerli bir fiyattır ve reddedilmesi beklenemez.
+	 */
+	static Stream<String> fazlaOndalikliFiyatlar() {
+		Stream<String> sinirlar = Stream.of("10.005", "0.001", "99.999", "1.234567", "0.0000001");
+		Stream<String> rastgeleler = Stream.generate(ParcaTest::rastgeleFazlaOndalikliFiyat)
+				.limit(RASTGELE_DENEME_SAYISI);
+		return Stream.concat(sinirlar, rastgeleler);
+	}
+
+	private static String rastgeleFazlaOndalikliFiyat() {
+		int ondalik = rastgele(3, 6);
+		long tam = ThreadLocalRandom.current().nextLong(0, 100_000);
+		long ilkBasamaklar = ThreadLocalRandom.current().nextLong(0, (long) Math.pow(10, ondalik - 1));
+		long kesir = ilkBasamaklar * 10 + rastgele(1, 9);
+		return tam + "." + "0".repeat(ondalik - Long.toString(kesir).length()) + kesir;
+	}
+
+	@ParameterizedTest(name = "fiyat={0}")
+	@MethodSource("rastgeleGecerliFiyatlar")
+	void olusturma_gecerliFiyatiDegistirmedenIkiOndalikliSaklar(BigDecimal fiyat) {
+		Parca parca = new Parca("P-1", "Filtre", 1, fiyat);
+
+		assertThat(parca.getBirimFiyat()).isEqualByComparingTo(fiyat);
+		assertThat(parca.getBirimFiyat().scale()).isEqualTo(2);
+	}
+
+	/** Üreteç doğru olmalı: reddedilmesi beklenen her fiyatın sade hali gerçekten 2'den fazla ondalık içermeli. */
+	@Test
+	void fazlaOndalikliFiyatUreteciHicGecerliFiyatUretmez() {
+		long gecerliUretilen = Stream.generate(ParcaTest::rastgeleFazlaOndalikliFiyat)
+				.limit(10_000)
+				.filter(fiyat -> new BigDecimal(fiyat).stripTrailingZeros().scale() <= 2)
+				.count();
+
+		assertThat(gecerliUretilen).isZero();
+	}
+
+	@ParameterizedTest(name = "fiyat={0}")
+	@MethodSource("fazlaOndalikliFiyatlar")
+	void olusturma_ikidenFazlaOndalikliFiyatiSessizceYuvarlamadanReddeder(String fiyat) {
+		assertThatThrownBy(() -> new Parca("P-1", "Filtre", 1, new BigDecimal(fiyat)))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("ondalık");
+	}
+
+	@ParameterizedTest(name = "fiyat={0}")
+	@ValueSource(strings = { "10.500", "10.50000", "10.5", "10", "1E+2", "0.000", "72153.620", "0.010" })
+	void olusturma_sondakiSifirlarBasamakSayilmazVeFiyatIkiOndalikliSaklanir(String fiyat) {
+		Parca parca = new Parca("P-1", "Filtre", 1, new BigDecimal(fiyat));
+
+		assertThat(parca.getBirimFiyat()).isEqualByComparingTo(fiyat);
+		assertThat(parca.getBirimFiyat().scale()).isEqualTo(2);
+	}
+
+	@ParameterizedTest(name = "fiyat={0}")
+	@ValueSource(strings = { "10000000000", "99999999999.99", "1E+10", "123456789012" })
+	void olusturma_tamKismiOnBasamagiAsanFiyatiReddeder(String fiyat) {
+		assertThatThrownBy(() -> new Parca("P-1", "Filtre", 1, new BigDecimal(fiyat)))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("10 basamak");
+	}
+
+	@ParameterizedTest(name = "fiyat={0}")
+	@ValueSource(strings = { "9999999999.99", "9999999999", "1E+9" })
+	void olusturma_tamKismiTamOnBasamaktaysaKabulEder(String fiyat) {
+		assertThat(new Parca("P-1", "Filtre", 1, new BigDecimal(fiyat)).getBirimFiyat())
+				.isEqualByComparingTo(fiyat);
+	}
+
+	@ParameterizedTest(name = "fiyat={0}")
+	@ValueSource(strings = { "10.005", "10000000000" })
+	void bilgileriGuncelle_hassasiyetiBozanFiyatiReddederVeEskiDegerKalir(String fiyat) {
+		Parca parca = new Parca("P-1", "Filtre", 5, new BigDecimal("100.00"));
+
+		assertThatThrownBy(() -> parca.bilgileriGuncelle("Yeni ad", new BigDecimal(fiyat)))
+				.isInstanceOf(IllegalArgumentException.class);
+		assertThat(parca.getAd()).isEqualTo("Filtre");
+		assertThat(parca.getBirimFiyat()).isEqualByComparingTo("100.00");
+	}
+
 }
