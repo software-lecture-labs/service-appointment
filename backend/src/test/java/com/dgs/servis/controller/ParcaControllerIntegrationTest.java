@@ -15,7 +15,6 @@ import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -67,9 +66,9 @@ class ParcaControllerIntegrationTest {
 
 		mockMvc.perform(get("/api/parcalar"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.icerik", hasSize(1)))
-				.andExpect(jsonPath("$.icerik[0].stokAdedi").value(4))
-				.andExpect(jsonPath("$.toplamKayit").value(1));
+				.andExpect(jsonPath("$.content", hasSize(1)))
+				.andExpect(jsonPath("$.content[0].stokAdedi").value(4))
+				.andExpect(jsonPath("$.page.totalElements").value(1));
 	}
 
 	@Test
@@ -193,27 +192,44 @@ class ParcaControllerIntegrationTest {
 		parcaEkle("A-1", 1).andExpect(status().isCreated());
 		parcaEkle("B-2", 1).andExpect(status().isCreated());
 
-		mockMvc.perform(get("/api/parcalar").param("sayfa", "0").param("boyut", "2"))
+		mockMvc.perform(get("/api/parcalar").param("page", "0").param("size", "2"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.icerik", hasSize(2)))
-				.andExpect(jsonPath("$.icerik[0].kod").value("A-1"))
-				.andExpect(jsonPath("$.icerik[1].kod").value("B-2"))
-				.andExpect(jsonPath("$.toplamKayit").value(3))
-				.andExpect(jsonPath("$.toplamSayfa").value(2));
+				.andExpect(jsonPath("$.content", hasSize(2)))
+				.andExpect(jsonPath("$.content[0].kod").value("A-1"))
+				.andExpect(jsonPath("$.content[1].kod").value("B-2"))
+				.andExpect(jsonPath("$.page.totalElements").value(3))
+				.andExpect(jsonPath("$.page.totalPages").value(2));
 
-		mockMvc.perform(get("/api/parcalar").param("sayfa", "1").param("boyut", "2"))
-				.andExpect(jsonPath("$.icerik", hasSize(1)))
-				.andExpect(jsonPath("$.icerik[0].kod").value("C-3"));
+		mockMvc.perform(get("/api/parcalar").param("page", "1").param("size", "2"))
+				.andExpect(jsonPath("$.content", hasSize(1)))
+				.andExpect(jsonPath("$.content[0].kod").value("C-3"));
 	}
 
-	@ParameterizedTest(name = "sayfa={0}, boyut={1}")
-	@CsvSource({ "-1, 20", "0, 0", "0, -5", "0, 101" })
-	void gecersizSayfaParametreleri400Doner(int sayfa, int boyut) throws Exception {
-		mockMvc.perform(get("/api/parcalar")
-				.param("sayfa", String.valueOf(sayfa))
-				.param("boyut", String.valueOf(boyut)))
+	@Test
+	void sayfaBoyutuEnFazla100OlurVeAsanDegerKirpilir() throws Exception {
+		parcaEkle("A-1", 1).andExpect(status().isCreated());
+
+		mockMvc.perform(get("/api/parcalar").param("size", "5000"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.page.size").value(100));
+	}
+
+	@Test
+	void istenirseBaskaIzinliAlanaGoreSiralanir() throws Exception {
+		parcaEkle("A-1", 5).andExpect(status().isCreated());
+		parcaEkle("B-2", 1).andExpect(status().isCreated());
+
+		mockMvc.perform(get("/api/parcalar").param("sort", "stokAdedi,asc"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content[0].kod").value("B-2"));
+	}
+
+	@ParameterizedTest(name = "sort={0}")
+	@ValueSource(strings = { "version", "KOD", "birim_fiyat", "x;drop table parca" })
+	void izinsizSiralamaAlani400Doner(String sort) throws Exception {
+		mockMvc.perform(get("/api/parcalar").param("sort", sort))
 				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.kod").value("GECERSIZ_ISTEK"));
+				.andExpect(jsonPath("$.kod").value("GECERSIZ_SIRALAMA_ALANI"));
 	}
 
 	private String parcaEkleVeIdAl(String kod, int stok) throws Exception {

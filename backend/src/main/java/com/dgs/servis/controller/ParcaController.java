@@ -9,6 +9,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,10 +20,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.dgs.servis.dto.SayfaYaniti;
 import com.dgs.servis.dto.parca.ParcaGuncelleIstegi;
 import com.dgs.servis.dto.parca.ParcaOlusturIstegi;
 import com.dgs.servis.dto.parca.ParcaYaniti;
@@ -36,12 +37,11 @@ public class ParcaController {
 	private final ParcaService parcaService;
 
 	@GetMapping
-	@Operation(summary = "Parçaları koda göre sıralı, sayfalı listeler",
-			description = "Sayfa numarası 0'dan başlar. Sayfa boyutu 1 ile 100 arasında olmalıdır, aksi halde 400 döner.")
-	public SayfaYaniti<ParcaYaniti> listele(
-			@RequestParam(defaultValue = "0") int sayfa,
-			@RequestParam(defaultValue = "20") int boyut) {
-		return parcaService.listele(sayfa, boyut);
+	@Operation(summary = "Parçaları sayfalı listeler",
+			description = "Varsayılan olarak koda göre sıralıdır. page 0'dan başlar, size en fazla 100'dür. "
+					+ "sort yalnızca id, kod, ad, birimFiyat veya stokAdedi olabilir, aksi halde 400 döner.")
+	public PagedModel<ParcaYaniti> listele(@PageableDefault(size = 20, sort = "kod") Pageable pageable) {
+		return new PagedModel<>(parcaService.listele(pageable));
 	}
 
 	@GetMapping("/{id}")
