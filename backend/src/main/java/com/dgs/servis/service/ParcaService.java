@@ -1,13 +1,15 @@
 package com.dgs.servis.service;
 
-import com.dgs.servis.dto.SayfaYaniti;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.dgs.servis.dto.parca.ParcaGuncelleIstegi;
 import com.dgs.servis.dto.parca.ParcaOlusturIstegi;
 import com.dgs.servis.dto.parca.ParcaYaniti;
 
 public interface ParcaService {
 
-	SayfaYaniti<ParcaYaniti> listele(int sayfa, int boyut);
+	Page<ParcaYaniti> listele(Pageable pageable);
 
 	ParcaYaniti getir(Long id);
 

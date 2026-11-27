@@ -15,22 +15,20 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
-import com.dgs.servis.dto.SayfaYaniti;
 import com.dgs.servis.dto.parca.ParcaGuncelleIstegi;
 import com.dgs.servis.dto.parca.ParcaOlusturIstegi;
 import com.dgs.servis.dto.parca.ParcaYaniti;
 import com.dgs.servis.entity.Parca;
-import com.dgs.servis.exception.GecersizIstekException;
+import com.dgs.servis.exception.GecersizSiralamaAlaniException;
 import com.dgs.servis.exception.KayitBulunamadiException;
 import com.dgs.servis.exception.KayitZatenVarException;
 import com.dgs.servis.exception.StokLimitiAsildiException;
@@ -124,40 +122,62 @@ class ParcaServiceImplTest {
 	}
 
 	@Test
-	void listele_koduSiralayarakIstenenSayfayiGetirirVeYanitaCevirir() {
+	void listele_istenenSayfayiAyniPageableIleSorgularVeYanitaCevirir() {
 		Pageable istenen = PageRequest.of(1, 2, Sort.by("kod"));
 		when(parcaRepository.findAll(istenen))
 				.thenReturn(new PageImpl<>(List.of(parca("C-3", 1)), istenen, 3));
 
-		SayfaYaniti<ParcaYaniti> yanit = parcaService.listele(1, 2);
+		Page<ParcaYaniti> yanit = parcaService.listele(istenen);
 
-		assertThat(yanit.icerik()).extracting(ParcaYaniti::kod).containsExactly("C-3");
-		assertThat(yanit.sayfa()).isEqualTo(1);
-		assertThat(yanit.boyut()).isEqualTo(2);
-		assertThat(yanit.toplamKayit()).isEqualTo(3);
-		assertThat(yanit.toplamSayfa()).isEqualTo(2);
-		ArgumentCaptor<Pageable> yakalanan = ArgumentCaptor.forClass(Pageable.class);
-		verify(parcaRepository).findAll(yakalanan.capture());
-		assertThat(yakalanan.getValue().getSort().getOrderFor("kod")).isNotNull();
+		assertThat(yanit.getContent()).extracting(ParcaYaniti::kod).containsExactly("C-3");
+		assertThat(yanit.getNumber()).isEqualTo(1);
+		assertThat(yanit.getSize()).isEqualTo(2);
+		assertThat(yanit.getTotalElements()).isEqualTo(3);
+		assertThat(yanit.getTotalPages()).isEqualTo(2);
 	}
 
-	@ParameterizedTest(name = "sayfa={0}, boyut={1}")
-	@CsvSource({ "-1, 20", "-100, 20", "0, 0", "0, -1", "0, 101", "0, 2147483647" })
-	void listele_gecersizSayfaVeBoyutuReddeder(int sayfa, int boyut) {
-		assertThatThrownBy(() -> parcaService.listele(sayfa, boyut)).isInstanceOf(GecersizIstekException.class);
+	@ParameterizedTest(name = "siralama={0}")
+	@ValueSource(strings = { "id", "kod", "ad", "birimFiyat", "stokAdedi" })
+	void listele_izinliSiralamaAlanlariniKabulEder(String alan) {
+		Pageable istenen = PageRequest.of(0, 20, Sort.by(alan));
+		when(parcaRepository.findAll(istenen)).thenReturn(new PageImpl<>(List.of(), istenen, 0));
+
+		assertThat(parcaService.listele(istenen).getContent()).isEmpty();
+	}
+
+	@ParameterizedTest(name = "siralama={0}")
+	@ValueSource(strings = { "version", "KOD", "kod; drop table parca", "birim_fiyat" })
+	void listele_izinsizSiralamaAlaniniReddederVeSorgulamaz(String alan) {
+		Pageable istenen = PageRequest.of(0, 20, Sort.by(alan));
+
+		assertThatThrownBy(() -> parcaService.listele(istenen)).isInstanceOf(GecersizSiralamaAlaniException.class);
 		verify(parcaRepository, never()).findAll(any(Pageable.class));
 	}
 
-	@ParameterizedTest(name = "boyut={0}")
-	@ValueSource(ints = { 1, 20, 100 })
-	void listele_sinirdakiGecerliBoyutlariKabulEder(int boyut) {
-		Pageable istenen = PageRequest.of(0, boyut, Sort.by("kod"));
-		when(parcaRepository.findAll(istenen)).thenReturn(new PageImpl<>(List.of(), istenen, 0));
+	@Test
+	void listele_izinliVeIzinsizAlanBirlikteIstenirseReddeder() {
+		Pageable istenen = PageRequest.of(0, 20, Sort.by("kod", "version"));
 
-		SayfaYaniti<ParcaYaniti> yanit = parcaService.listele(0, boyut);
+		assertThatThrownBy(() -> parcaService.listele(istenen)).isInstanceOf(GecersizSiralamaAlaniException.class);
+		verify(parcaRepository, never()).findAll(any(Pageable.class));
+	}
 
-		assertThat(yanit.icerik()).isEmpty();
-		assertThat(yanit.boyut()).isEqualTo(boyut);
+	@Test
+	void sil_kayitVarsaSilerVeBaskaKayitaDokunmaz() {
+		Parca parca = parca("A-1", 5);
+		when(parcaRepository.findById(1L)).thenReturn(Optional.of(parca));
+
+		parcaService.sil(1L);
+
+		verify(parcaRepository).delete(parca);
+	}
+
+	@Test
+	void sil_kayitYoksaKayitBulunamadiFirlatirVeHicSilmez() {
+		when(parcaRepository.findById(9L)).thenReturn(Optional.empty());
+
+		assertThatThrownBy(() -> parcaService.sil(9L)).isInstanceOf(KayitBulunamadiException.class);
+		verify(parcaRepository, never()).delete(any(Parca.class));
 	}
 
 }
